@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 ARG MAJOR_VERSION=6.4
 ARG ZBX_VERSION=${MAJOR_VERSION}.16
-ARG BUILD_BASE_IMAGE=zabbix-build-pgsql:centos-${ZBX_VERSION}
+ARG BUILD_BASE_IMAGE=zabbix/zabbix-build-pgsql:centos-${ZBX_VERSION}
 
 FROM ${BUILD_BASE_IMAGE} AS builder
 
@@ -56,6 +56,8 @@ RUN --mount=type=tmpfs,target=/var/lib/dnf/ \
             postgresql-private-libs \
             shadow-utils \
             zlib \
+            python3 \
+            python3-pip \
             gzip \
             unixODBC" && \
     microdnf -y install \
