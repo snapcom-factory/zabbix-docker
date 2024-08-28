@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM quay.io/centos/centos:stream8
+FROM quay.io/centos/centos:stream9
 
 ARG MAJOR_VERSION=6.0
 ARG ZBX_VERSION=${MAJOR_VERSION}.31
@@ -17,54 +17,56 @@ LABEL org.opencontainers.image.authors="Alexey Pustovalov <alexey.pustovalov@zab
       org.opencontainers.image.vendor="Zabbix SIA" \
       org.opencontainers.image.version="${ZBX_VERSION}"
 
-RUN --mount=type=tmpfs,target=/var/lib/dnf/ \
-    set -eux && \
-    REPOLIST="baseos,appstream,powertools,epel" && \
-    INSTALL_PKGS="autoconf \
-            automake \
-            bash \
-            gcc \
-            patch \
-            pcre2-devel \
-            libcurl-devel \
-            libevent-devel \
-            libssh-devel \
-            libmodbus-devel \
-            libxml2-devel \
-            openssl-devel \
-            openldap-devel \
-            make \
-            mysql-devel \
-            net-snmp-devel \
-            OpenIPMI-devel \
-            openldap-devel \
-            sqlite-devel \
-            postgresql-private-devel \
-            postgresql-server-devel \
-            java-17-openjdk-devel \
-            git \
-            gettext \
-            go-toolset \
-            unixODBC-devel \
-            zlib-devel" && \
-    dnf -y install \
-        --disablerepo "*" \
-        --enablerepo "extras" \
-        --setopt=tsflags=nodocs \
-        --setopt=install_weak_deps=False \
-        --setopt=keepcache=False \
-        --best epel-release && \
-    dnf -y module enable \
-        --disablerepo "*" \
-        --enablerepo "appstream" \
-        --setopt=install_weak_deps=False \
-        --setopt=keepcache=False \
-        postgresql:16 mysql && \
-    dnf -y install \
-        --disablerepo "*" \
-        --enablerepo "${REPOLIST}" \
-        --setopt=tsflags=nodocs \
-        --setopt=install_weak_deps=False \
-        --setopt=keepcache=False \
-        --best ${INSTALL_PKGS} && \
-    dnf -y clean all
+      RUN --mount=type=tmpfs,target=/var/lib/dnf/ \
+      set -eux && \
+      INSTALL_PKGS="autoconf \
+              automake \
+              bash \
+              gcc \
+              patch \
+              pcre2-devel \
+              libcurl-devel \
+              libevent-devel \
+              libssh-devel \
+              libmodbus-devel \
+              libxml2-devel \
+              openssl-devel \
+              openldap-devel \
+              make \
+              mysql-devel \
+              net-snmp-devel \
+              OpenIPMI-devel \
+              openldap-devel \
+              sqlite-devel \
+              postgresql-private-devel \
+              postgresql-server-devel \
+              java-17-openjdk-devel \
+              git \
+              gettext \
+              go-toolset \
+              unixODBC-devel \
+              zlib-devel" && \
+      dnf -y install \
+          --disablerepo "*" \
+          --enablerepo "extras-common" \
+          --setopt=install_weak_deps=0 \
+          --setopt=keepcache=0 \
+          --best \
+          --nodocs epel-release && \
+      dnf -y module enable \
+          --disablerepo "*" \
+          --enablerepo "appstream" \
+          --setopt=install_weak_deps=0 \
+          --setopt=keepcache=0 \
+          postgresql:16 && \
+      dnf -y install \
+          --disablerepo "*" \
+          --enablerepo "baseos" \
+          --enablerepo "appstream" \
+          --enablerepo "crb" \
+          --enablerepo="epel" \
+          --setopt=install_weak_deps=0 \
+          --setopt=keepcache=0 \
+          --best \
+          --nodocs ${INSTALL_PKGS} && \
+      dnf -y clean all

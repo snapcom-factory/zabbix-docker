@@ -5,7 +5,7 @@ ARG BUILD_BASE_IMAGE=zabbix-build-pgsql:centos-${ZBX_VERSION}
 
 FROM ${BUILD_BASE_IMAGE} AS builder
 
-FROM quay.io/centos/centos:stream8
+FROM quay.io/centos/centos:stream9
 
 ARG MAJOR_VERSION
 ARG ZBX_VERSION
@@ -35,16 +35,16 @@ COPY --from=builder ["/tmp/zabbix-${ZBX_VERSION}-output/server/database/postgres
 
 RUN --mount=type=tmpfs,target=/var/lib/dnf/ \
     set -eux && \
-    REPOLIST="baseos,appstream,epel" && \
     INSTALL_PKGS="fping \
             file-libs \
-            tini \
             traceroute \
             nmap \
             iputils \
             traceroute \
             libevent \
             libssh \
+            libpsl \
+            libbrotli \
             libxml2 \
             net-snmp-libs \
             OpenIPMI-libs \
@@ -53,37 +53,47 @@ RUN --mount=type=tmpfs,target=/var/lib/dnf/ \
             pcre2 \
             postgresql \
             postgresql-private-libs \
+            shadow-utils \
+            gcc make net-snmp net-snmp-utils  policycoreutils  libxml2-devel libxslt-devel php-soap php php-devel  libffi-devel openssl-devel net-snmp-perl \
             zlib \
+            python3 \
+            python3-pip \
+            dnf-plugins-core \
             gzip \
             unixODBC" && \
     dnf -y install \
         --disablerepo "*" \
-        --enablerepo "extras" \
-        --setopt=tsflags=nodocs \
-        --setopt=install_weak_deps=False \
-        --setopt=keepcache=False \
-        --best epel-release && \
+        --enablerepo "extras-common" \
+        --setopt=install_weak_deps=0 \
+        --setopt=keepcache=0 \
+        --best \
+        --nodocs epel-release && \
     dnf -y module enable \
         --disablerepo "*" \
         --enablerepo "appstream" \
-        --setopt=tsflags=nodocs \ 
         --setopt=install_weak_deps=0 \
         --setopt=keepcache=0 \
         postgresql:16 && \
     dnf -y install \
         --disablerepo "*" \
-        --enablerepo "${REPOLIST}" \
-        --setopt=tsflags=nodocs \ 
-        --setopt=install_weak_deps=False \
-        --setopt=keepcache=False \
-        --best ${INSTALL_PKGS} && \
-    dnf -y reinstall \
-        --disablerepo "*" \
         --enablerepo "baseos" \
-        --setopt=tsflags=nodocs \
-        --setopt=install_weak_deps=False \
-        --setopt=keepcache=False \
-        --best tzdata && \
+        --enablerepo "appstream" \
+        --enablerepo="epel" \
+        --setopt=install_weak_deps=0 \
+        --setopt=keepcache=0 \
+        --best \
+        --nodocs ${INSTALL_PKGS} && \
+    dnf -y reinstall \
+            --enablerepo "baseos" \
+            --setopt=install_weak_deps=0 \
+            --setopt=keepcache=0 \
+            --best \
+            --setopt=tsflags=nodocs \
+        tzdata && \
+    dnf download libcurl && \
+    rpm -Uvh --nodeps --replacefiles "*curl*$( uname -i ).rpm" && \
+    dnf remove -y libcurl-minimal && \
+    rm -rf "*curl*$( uname -i ).rpm" && \
     groupadd \
             --system \
             --gid 1995 \
@@ -123,13 +133,13 @@ RUN --mount=type=tmpfs,target=/var/lib/dnf/ \
 EXPOSE 10051/TCP
 
 WORKDIR /var/lib/zabbix
-
+    
 VOLUME ["/var/lib/zabbix/snmptraps", "/var/lib/zabbix/export"]
-
+    
 COPY ["docker-entrypoint.sh", "/usr/bin/"]
-
-ENTRYPOINT ["/usr/bin/tini", "--", "/usr/bin/docker-entrypoint.sh"]
-
+    
+ENTRYPOINT ["/usr/bin/docker-entrypoint.sh"]
+    
 USER 1997
-
+    
 CMD ["/usr/sbin/zabbix_server", "--foreground", "-c", "/etc/zabbix/zabbix_server.conf"]
